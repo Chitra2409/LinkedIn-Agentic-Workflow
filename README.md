@@ -16,7 +16,7 @@ Input: Job Description → Output: Personalized Email Drafts in Gmail
 
 ### n8n Workflow Canvas
 
-![n8n Workflow Screenshot](n8n workflow.png)
+![n8n Workflow Screenshot](n8n-workflow-screenshot.png)
 
 *The complete workflow as seen in the n8n editor. Three rows of nodes: Search phase (top), Extract & Enrich phase (middle), Output phase (bottom). Hunter node shows Success/Error branching with "Continue On Error" enabled.*
 
