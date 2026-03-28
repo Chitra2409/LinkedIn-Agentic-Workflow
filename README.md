@@ -8,13 +8,131 @@ This document describes a fully automated LinkedIn outreach and cold-emailing sy
 
 ## Architecture
 
+**Total Nodes: 11 | 4 Phases | Fully Automated**
+
 ```
-Chat Trigger → OpenAI (Boolean Query) → SerpAPI (Google Search) → Code (Parse Results)
-  → OpenAI (Extract Names/Domains) → Code (Clean Data) → Hunter.io (Find Emails)
-  → Code (Merge Data) → OpenAI (Write Cold Email) → Google Sheets → Gmail Draft
+Input: Job Description → Output: Personalized Email Drafts in Gmail
 ```
 
-**Total Nodes: 11**
+### n8n Workflow Canvas
+
+![n8n Workflow Screenshot](n8n-workflow-screenshot.png)
+
+*The complete workflow as seen in the n8n editor. Three rows of nodes: Search phase (top), Extract & Enrich phase (middle), Output phase (bottom). Hunter node shows Success/Error branching with "Continue On Error" enabled.*
+
+### Visual Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 1 — SEARCH                                              │
+│                                                                 │
+│  ┌─────────────────────┐                                        │
+│  │   Chat Trigger      │  ← You type a job description         │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  OpenAI GPT-4o-mini │  → Generates Boolean search query      │
+│  │  (Boolean Query)    │     e.g. site:linkedin.com/in/ AND ... │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  SerpAPI            │  → Searches Google (no captcha!)       │
+│  │  (Google Search)    │     Returns 10 LinkedIn profiles       │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  Code: Parse        │  → Extracts URLs, names, companies    │
+│  │  SerpAPI Results    │     from structured JSON response      │
+│  └─────────┬───────────┘                                        │
+└────────────┼────────────────────────────────────────────────────┘
+             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 2 — EXTRACT                                             │
+│                                                                 │
+│  ┌─────────────────────┐                                        │
+│  │  OpenAI GPT-4o-mini │  → Extracts: firstName, lastName,     │
+│  │  (Extract Names)    │     companyDomain from each profile    │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  Code: Clean &      │  → Removes bad data (single-letter    │
+│  │  Validate Data      │     names, missing domains, markdown)  │
+│  └─────────┬───────────┘                                        │
+└────────────┼────────────────────────────────────────────────────┘
+             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 3 — ENRICH                                              │
+│                                                                 │
+│  ┌─────────────────────┐                                        │
+│  │  Hunter.io          │  → Finds email addresses using        │
+│  │  (Email Finder)     │     name + company domain              │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  Code: Merge        │  → Normalizes Hunter output           │
+│  │  Results            │     (handles success + error cases)    │
+│  └─────────┬───────────┘                                        │
+└────────────┼────────────────────────────────────────────────────┘
+             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PHASE 4 — OUTPUT                                              │
+│                                                                 │
+│  ┌─────────────────────┐                                        │
+│  │  OpenAI GPT-4o-mini │  → Writes personalized cold email     │
+│  │  (Cold Email)       │     with subject line + body           │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  Google Sheets      │  → Saves: Name, Email, LinkedIn URL,  │
+│  │  (Save Results)     │     Company Domain, Cold Email text    │
+│  └─────────┬───────────┘                                        │
+│            ▼                                                    │
+│  ┌─────────────────────┐                                        │
+│  │  Gmail              │  → Creates draft email ready to send   │
+│  │  (Create Draft)     │     Review in your Drafts folder!     │
+│  └─────────────────────┘                                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Mermaid Diagram (renders on GitHub)
+
+```mermaid
+flowchart TD
+    A["Chat Trigger<br>(Job Description)"] --> B["OpenAI<br>(Boolean Query Generator)"]
+    B --> C["SerpAPI<br>(Google Search)"]
+    C --> D["Code<br>(Parse LinkedIn URLs)"]
+    D --> E["OpenAI<br>(Extract Names + Domains)"]
+    E --> F["Code<br>(Clean + Validate Data)"]
+    F --> G["Hunter.io<br>(Find Emails)"]
+    G --> H["Code<br>(Merge Results)"]
+    H --> I["OpenAI<br>(Write Cold Email)"]
+    I --> J["Google Sheets<br>(Save All Results)"]
+    J --> K["Gmail<br>(Create Draft)"]
+
+    style A fill:#F1EFE8,stroke:#5F5E5A
+    style B fill:#EEEDFE,stroke:#534AB7
+    style C fill:#E6F1FB,stroke:#185FA5
+    style D fill:#E1F5EE,stroke:#0F6E56
+    style E fill:#EEEDFE,stroke:#534AB7
+    style F fill:#E1F5EE,stroke:#0F6E56
+    style G fill:#FAECE7,stroke:#993C1D
+    style H fill:#E1F5EE,stroke:#0F6E56
+    style I fill:#EEEDFE,stroke:#534AB7
+    style J fill:#EAF3DE,stroke:#3B6D11
+    style K fill:#FAEEDA,stroke:#854F0B
+```
+
+### Node Color Legend
+
+| Color | Type | Nodes |
+|-------|------|-------|
+| Purple | AI (OpenAI GPT-4o-mini) | Boolean Query, Extract Names, Cold Email |
+| Teal | Code (JavaScript) | Parse Results, Clean Data, Merge Results |
+| Blue | Search API (SerpAPI) | Google Search |
+| Coral | Email API (Hunter.io) | Find Emails |
+| Green | Google Sheets | Save Results |
+| Amber | Gmail | Create Drafts |
+| Gray | Trigger | Chat Trigger |
 
 ---
 
