@@ -16,7 +16,7 @@ Input: Job Description → Output: Personalized Email Drafts in Gmail
 
 ### n8n Workflow Canvas
 
-![n8n Workflow Screenshot](n8n-workflow-screenshot.png)
+![n8n Workflow Screenshot](n8n workflow.png)
 
 *The complete workflow as seen in the n8n editor. Three rows of nodes: Search phase (top), Extract & Enrich phase (middle), Output phase (bottom). Hunter node shows Success/Error branching with "Continue On Error" enabled.*
 
@@ -94,46 +94,6 @@ Input: Job Description → Output: Personalized Email Drafts in Gmail
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Mermaid Diagram (renders on GitHub)
-
-```mermaid
-flowchart TD
-    A["Chat Trigger<br>(Job Description)"] --> B["OpenAI<br>(Boolean Query Generator)"]
-    B --> C["SerpAPI<br>(Google Search)"]
-    C --> D["Code<br>(Parse LinkedIn URLs)"]
-    D --> E["OpenAI<br>(Extract Names + Domains)"]
-    E --> F["Code<br>(Clean + Validate Data)"]
-    F --> G["Hunter.io<br>(Find Emails)"]
-    G --> H["Code<br>(Merge Results)"]
-    H --> I["OpenAI<br>(Write Cold Email)"]
-    I --> J["Google Sheets<br>(Save All Results)"]
-    J --> K["Gmail<br>(Create Draft)"]
-
-    style A fill:#F1EFE8,stroke:#5F5E5A
-    style B fill:#EEEDFE,stroke:#534AB7
-    style C fill:#E6F1FB,stroke:#185FA5
-    style D fill:#E1F5EE,stroke:#0F6E56
-    style E fill:#EEEDFE,stroke:#534AB7
-    style F fill:#E1F5EE,stroke:#0F6E56
-    style G fill:#FAECE7,stroke:#993C1D
-    style H fill:#E1F5EE,stroke:#0F6E56
-    style I fill:#EEEDFE,stroke:#534AB7
-    style J fill:#EAF3DE,stroke:#3B6D11
-    style K fill:#FAEEDA,stroke:#854F0B
-```
-
-### Node Color Legend
-
-| Color | Type | Nodes |
-|-------|------|-------|
-| Purple | AI (OpenAI GPT-4o-mini) | Boolean Query, Extract Names, Cold Email |
-| Teal | Code (JavaScript) | Parse Results, Clean Data, Merge Results |
-| Blue | Search API (SerpAPI) | Google Search |
-| Coral | Email API (Hunter.io) | Find Emails |
-| Green | Google Sheets | Save Results |
-| Amber | Gmail | Create Drafts |
-| Gray | Trigger | Chat Trigger |
-
 ---
 
 ## Prerequisites
@@ -154,7 +114,6 @@ flowchart TD
 2. **Google Sheets OAuth2** — Google account OAuth connection
 3. **Gmail OAuth2** — Google account OAuth connection (separate from Sheets)
 4. **Hunter API** — API key from hunter.io
-5. **Header Auth** (legacy, no longer needed with SerpAPI)
 
 ---
 
@@ -496,7 +455,7 @@ Step 11: Gmail creates draft
 ## Key Design Decisions
 
 ### Why SerpAPI instead of direct Google scraping?
-The original workflow from Abhijay's guide uses direct HTTP requests to Google with browser cookies for authentication. This works when n8n is self-hosted on the same machine as the browser (matching IP addresses). On n8n Cloud, Google's servers see a different IP than where the cookies were created, triggering captcha/security challenges. SerpAPI handles all Google authentication internally and never gets blocked.
+Direct HTTP requests to Google with browser cookies work when n8n is self-hosted on the same machine as the browser (matching IP addresses). On n8n Cloud, Google's servers see a different IP than where the cookies were created, triggering captcha/security challenges. SerpAPI handles all Google authentication internally and never gets blocked.
 
 ### Why a "Merge" Code node after Hunter?
 Hunter's output format differs between success and failure cases. On success, data lives at `json.data.email`. On failure (error output), the original input fields pass through differently. The merge node normalizes both cases so downstream nodes always see the same field names.
